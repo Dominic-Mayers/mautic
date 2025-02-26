@@ -1,0 +1,64 @@
+name: Transifex tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  phpunit:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php-versions: ['7.4', '8.0', '8.1']
+  
+    name: Test PHP ${{ matrix.php-versions }}
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Setup PHP, with composer and extensions
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-versions }}
+        coverage: pcov
+
+    - name: Install dependencies
+      run: |
+        composer validate
+        composer install --prefer-dist --no-progress --no-suggest
+
+    - name: Run PHPUnit
+      run: |
+        if [[ "${{ matrix.php-versions }}" == "7.4" ]]; then
+          composer test -- --coverage-clover=coverage.clover --testsuite=Unit
+          wget https://scrutinizer-ci.com/ocular.phar
+          php ocular.phar code-coverage:upload --format=php-clover coverage.clover
+        else
+          composer test -- --testsuite=Unit
+        fi
+
+  misc:
+    runs-on: ubuntu-latest
+    name: Test CS + PHPSTAN
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Setup PHP, with composer and extensions
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: 8.0
+
+    - name: Install dependencies
+      run: |
+        composer validate
+        composer install --prefer-dist --no-progress --no-suggest
+
+    - name: Run PHPSTAN
+      run: composer phpstan
+
+    - name: Run CS checks
+      run: composer cs 
