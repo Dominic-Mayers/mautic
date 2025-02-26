@@ -60,10 +60,6 @@
 !/config/.gitkeep
 
 
-/bin/*
-!/bin/.htaccess
-!/bin/console
-
 /assets/ckeditor/build/*
 
 /bundles
