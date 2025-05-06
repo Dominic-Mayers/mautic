@@ -3,6 +3,7 @@
 namespace Mautic\LeadBundle\EventListener;
 
 use Doctrine\Common\EventSubscriber;
+use Doctrine\DBAL\Exception\DriverException;
 use Doctrine\DBAL\Types\StringType;
 use Doctrine\ORM\Tools\Event\GenerateSchemaEventArgs;
 use Doctrine\ORM\Tools\ToolEvents;
@@ -40,15 +41,18 @@ class DoctrineSubscriber implements EventSubscriber
             foreach ($objects as $object => $tableName) {
                 $table = $schema->getTable(MAUTIC_TABLE_PREFIX.$tableName);
 
-                // get a list of fields
-                $fields = $args->getEntityManager()->getConnection()->createQueryBuilder()
-                    ->select('f.alias, f.is_unique_identifer as is_unique, f.is_index, f.type, f.object')
-                    ->from(MAUTIC_TABLE_PREFIX.'lead_fields', 'f')
-                    ->where("f.object = '$object'")
-                    ->orderBy('f.field_order', 'ASC')
-                    ->executeQuery()
-                    ->fetchAllAssociative();
-
+                try {
+                    // get a list of fields
+                    $fields = $args->getEntityManager()->getConnection()->createQueryBuilder()
+                        ->select('f.alias, f.is_unique_identifer as is_unique, f.is_index, f.type, f.object')
+                        ->from(MAUTIC_TABLE_PREFIX.'lead_fields', 'f')
+                        ->where("f.object = '$object'")
+                        ->orderBy('f.field_order', 'ASC')
+                        ->executeQuery()
+                        ->fetchAllAssociative();
+                } catch (DriverException $e) {
+                    $fields = [];
+                }
                 // Compile which ones are unique identifiers
                 $uniqueFields = [];
                 foreach ($fields as $field) {
